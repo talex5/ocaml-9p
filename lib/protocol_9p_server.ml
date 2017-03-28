@@ -153,7 +153,12 @@ module Make(Log: Protocol_9p_s.LOG)(FLOW: V1_LWT.FLOW)(Filesystem: Protocol_9p_f
         Lwt.async (fun () ->
           Lwt.catch
             (fun () -> receive_cb ~cancel:cancel_t request.Request.payload)
-            (fun exn -> Lwt.return (Result.Ok (exn_converter info exn)))
+            (fun exn ->
+               let backtrace = Printexc.get_raw_backtrace () in
+               Log.err (fun f -> f "Uncaught exception handling %a: %a"
+                         Request.pp request
+                         Fmt.exn_backtrace (exn, backtrace));
+               Lwt.return (Result.Ok (exn_converter info exn)))
           >>= begin function
             | Error (`Msg message) ->
               Lwt.return (error_response request.Request.tag message)
