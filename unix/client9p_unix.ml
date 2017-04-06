@@ -59,6 +59,10 @@ module Make(Log: S.LOG) = struct
       else return h.Lwt_unix.h_addr_list.(0)
     ) >>= fun inet_addr ->
     let s = Lwt_unix.socket h.Lwt_unix.h_addrtype Lwt_unix.SOCK_STREAM 0 in
+    (* Hack for Docker overlay networking, which silently drops idle connections.
+       It would probably be better to move the address-resolving and socket-opening
+       code to conduit. *)
+    Lwt_unix.setsockopt s Lwt_unix.SO_KEEPALIVE true;
     connect_or_close s (Lwt_unix.ADDR_INET (inet_addr, port))
 
   let open_unix path =
